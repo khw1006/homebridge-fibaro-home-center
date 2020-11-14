@@ -151,7 +151,20 @@ export class GetFunctions {
 		this.returnValue(angle, callback, characteristic);
 	}
 	async getCurrentTemperature(callback, characteristic, service, IDs, properties) {
-		if (service.floatServiceId) {
+		if (properties.heatingThermostatSetpointFuture) {
+			try {
+				const r = parseFloat(properties.heatingThermostatSetpointFuture);
+				if (isNaN(properties.heatingThermostatSetpointFuture)) {
+					this.platform.log('Temperature is not a number.', '');
+					callback(new Error('Temperature is not a number.'), null);
+					return;
+				}
+				this.returnValue(r, callback, characteristic);
+			} catch (e) {
+				this.platform.log("There was a problem getting value from: ", `${IDs[0]} - Err: ${e}`);
+				callback(e, null);
+			}
+		} else if (service.floatServiceId) {
 			try {
 				const properties = (await this.platform.fibaroClient.getDeviceProperties(service.floatServiceId)).body.properties;
 				const r = parseFloat(properties.value);
@@ -220,7 +233,21 @@ export class GetFunctions {
 		this.returnValue(v == true ? this.hapCharacteristic.LockCurrentState.SECURED : this.hapCharacteristic.LockCurrentState.UNSECURED, callback, characteristic);
 	}
 	async getCurrentHeatingCoolingState(callback, characteristic, service, IDs, properties) {
-		if (service.operatingModeId) {	// Operating mode is availble on Home Center
+	    if (properties.thermostatMode) {
+			switch (properties.thermostatMode) {
+				case "Off": // OFF
+					this.returnValue(this.hapCharacteristic.CurrentHeatingCoolingState.OFF, callback, characteristic);
+					break;
+				case "Heat": // HEAT
+					this.returnValue(this.hapCharacteristic.CurrentHeatingCoolingState.HEAT, callback, characteristic);
+					break;
+				case "Cool": // COOL
+					this.returnValue(this.hapCharacteristic.CurrentHeatingCoolingState.COOL, callback, characteristic);
+					break;
+				default:
+					break;
+			}
+		} else if (service.operatingModeId) {	// Operating mode is availble on Home Center
 			try {
 				const properties = (await this.platform.fibaroClient.getDeviceProperties(service.operatingModeId)).body.properties;
 				switch (properties.mode) {
@@ -261,7 +288,24 @@ export class GetFunctions {
 		}
 	}
 	async getTargetHeatingCoolingState(callback, characteristic, service, IDs, properties) {
-		if (service.operatingModeId) {	// Operating mode is availble on Home Center
+	    if (properties.thermostatMode) {
+			switch (properties.thermostatMode) {
+				case "Off": // OFF
+					this.returnValue(this.hapCharacteristic.TargetHeatingCoolingState.OFF, callback, characteristic);
+					break;
+				case "Heat": // HEAT
+					this.returnValue(this.hapCharacteristic.TargetHeatingCoolingState.HEAT, callback, characteristic);
+					break;
+				case "Cool": // COOL
+					this.returnValue(this.hapCharacteristic.TargetHeatingCoolingState.COOL, callback, characteristic);
+					break;
+				case "Auto": // AUTO
+					this.returnValue(this.hapCharacteristic.TargetHeatingCoolingState.AUTO, callback, characteristic);
+					break;
+				default:
+					break;
+			}
+		} else if (service.operatingModeId) {	// Operating mode is availble on Home Center
 			try {
 				const properties = (await this.platform.fibaroClient.getDeviceProperties(service.operatingModeId)).body.properties;
 				switch (properties.mode) {
