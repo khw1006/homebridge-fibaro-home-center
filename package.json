@@ -1,16 +1,16 @@
 {
   "displayName": "homebridge Fibaro Home Center",
-  "name": "homebridge-fibaro-home-center",
-  "version": "1.2.14",
+  "name": "@khw1006/homebridge-fibaro-home-center",
+  "version": "1.2.15-hvac.b1",
   "description": "Homebridge plugin for Fibaro Home Center 3 ",
   "author": "ilcato",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ilcato/homebridge-fibaro-home-center.git"
+    "url": "https://github.com/khw1006/homebridge-fibaro-home-center.git"
   },
   "bugs": {
-    "url": "https://github.com/ilcato/homebridge-fibaro-home-center/issues"
+    "url": "https://github.com/khw1006/homebridge-fibaro-home-center/issues"
   },
   "engines": {
     "node": ">=10.17.0",

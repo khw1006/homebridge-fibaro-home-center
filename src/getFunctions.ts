@@ -178,6 +178,36 @@ export class GetFunctions {
         } catch (e) {
           this.platform.log('There was a problem getting value from: ', `${service.IDs[0]} - Err: ${e}`);
         }
+      } else if (service.isHvacHeat) {
+        if (!Object.prototype.hasOwnProperty.call(properties, 'heatingThermostatSetpointFuture')) {
+          this.platform.log('No value for Temperature.', '');
+          return;
+        }
+        try {
+          const r = parseFloat(properties.heatingThermostatSetpointFuture);
+          if (isNaN(r)) {
+            this.platform.log('Temperature is not a number.', '');
+            return;
+          }
+          characteristic.updateValue(r);
+        } catch (e) {
+          this.platform.log('There was a problem getting value from: ', `${service.IDs[0]} - Err: ${e}`);
+        }
+      } else if (service.isHvacCool) {
+        if (!Object.prototype.hasOwnProperty.call(properties, 'coolingThermostatSetpointFuture')) {
+          this.platform.log('No value for Temperature.', '');
+          return;
+        }
+        try {
+          const r = parseFloat(properties.coolingThermostatSetpointFuture);
+          if (isNaN(r)) {
+            this.platform.log('Temperature is not a number.', '');
+            return;
+          }
+          characteristic.updateValue(r);
+        } catch (e) {
+          this.platform.log('There was a problem getting value from: ', `${service.IDs[0]} - Err: ${e}`);
+        }
       } else {
         const value = properties.value;
         characteristic.updateValue(value);
@@ -205,6 +235,34 @@ export class GetFunctions {
             return;
           }
           characteristic.updateValue(properties.currentTemperature);
+        } catch (e) {
+          this.platform.log('There was a problem getting value from: ', `${service.IDs[0]} - Err: ${e}`);
+        }
+      } else if (service.isHvacHeat) {
+        if (!Object.prototype.hasOwnProperty.call(properties, 'heatingThermostatSetpoint')) {
+          return;
+        }
+        try {
+          const r = parseFloat(properties.heatingThermostatSetpoint);
+          if (isNaN(r)) {
+            this.platform.log('Temperature is not a number.', '');
+            return;
+          }
+          characteristic.updateValue(r);
+        } catch (e) {
+          this.platform.log('There was a problem getting value from: ', `${service.IDs[0]} - Err: ${e}`);
+        }
+      } else if (service.isHvacCool) {
+        if (!Object.prototype.hasOwnProperty.call(properties, 'coolingThermostatSetpoint')) {
+          return;
+        }
+        try {
+          const r = parseFloat(properties.coolingThermostatSetpoint);
+          if (isNaN(r)) {
+            this.platform.log('Temperature is not a number.', '');
+            return;
+          }
+          characteristic.updateValue(r);
         } catch (e) {
           this.platform.log('There was a problem getting value from: ', `${service.IDs[0]} - Err: ${e}`);
         }
@@ -300,6 +358,27 @@ export class GetFunctions {
         }
       } else if (service.isHeatingZone) {
         characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.HEAT);
+      } else if (service.isHvacHeat || service.isHvacCool) {
+        switch (properties.thermostatMode) {
+          case 'Off': // OFF
+            characteristic.updateValue(this.platform.Characteristic.CurrentHeatingCoolingState.OFF);
+            break;
+          case 'Heat': // HEAT
+            characteristic.updateValue(this.platform.Characteristic.CurrentHeatingCoolingState.HEAT);
+            break;
+          case 'Cool': // COOL
+            characteristic.updateValue(this.platform.Characteristic.CurrentHeatingCoolingState.COOL);
+            break;
+          case 'Auto': // AUTO
+            if (service.isHvacHeat) {
+              characteristic.updateValue(this.platform.Characteristic.CurrentHeatingCoolingState.HEAT);
+            } else {
+              characteristic.updateValue(this.platform.Characteristic.CurrentHeatingCoolingState.COOL);
+            }
+            break;
+          default:
+            break;
+        }
       }
     }
 
@@ -321,6 +400,9 @@ export class GetFunctions {
             case 'Cool': // COOL
               characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.COOL);
               break;
+            case 'Auto': // AUTO
+              characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.AUTO);
+              break;
             default:
               break;
           }
@@ -330,6 +412,23 @@ export class GetFunctions {
         }
       } else if (service.isHeatingZone) {
         characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.HEAT);
+      } else if (service.isHvacHeat || service.isHvacCool) {
+        switch (properties.thermostatMode) {
+          case 'Off': // OFF
+            characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.OFF);
+            break;
+          case 'Heat': // HEAT
+            characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.HEAT);
+            break;
+          case 'Cool': // COOL
+            characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.COOL);
+            break;
+          case 'Auto': // AUTO
+            characteristic.updateValue(this.platform.Characteristic.TargetHeatingCoolingState.AUTO);
+            break;
+          default:
+            break;
+        }
       }
     }
 

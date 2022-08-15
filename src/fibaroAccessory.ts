@@ -245,6 +245,26 @@ export class FibaroAccessory {
                         this.platform.Characteristic.TemperatureDisplayUnits];
             subtype = device.id + '--HZ';
             break;
+          case 'com.fibaro.hvacSystemHeat':
+            service = this.platform.Service.Thermostat;
+            this.mainCharacteristics =
+                      [this.platform.Characteristic.CurrentTemperature,
+                        this.platform.Characteristic.TargetTemperature,
+                        this.platform.Characteristic.CurrentHeatingCoolingState,
+                        this.platform.Characteristic.TargetHeatingCoolingState,
+                        this.platform.Characteristic.TemperatureDisplayUnits];
+            subtype = device.id + '--HVAC_HEAT';
+            break;
+          case 'com.fibaro.hvacSystemCool':
+            service = this.platform.Service.Thermostat;
+            this.mainCharacteristics =
+                      [this.platform.Characteristic.CurrentTemperature,
+                        this.platform.Characteristic.TargetTemperature,
+                        this.platform.Characteristic.CurrentHeatingCoolingState,
+                        this.platform.Characteristic.TargetHeatingCoolingState,
+                        this.platform.Characteristic.TemperatureDisplayUnits];
+            subtype = device.id + '--HVAC_COOL';
+            break;
           case 'G':
             service = this.platform.Service.Switch;
             this.mainCharacteristics = [this.platform.Characteristic.On];
@@ -305,11 +325,82 @@ export class FibaroAccessory {
           characteristic.props.minStep = 1;
           characteristic.props.minValue = 0;
         }
-        if (characteristic.UUID === this.platform.Characteristic.CurrentTemperature.UUID) {
-          characteristic.props.minValue = -50;
+        if (characteristic.UUID === this.platform.Characteristic.CurrentTemperature.UUID
+          || characteristic.UUID === this.platform.Characteristic.TargetTemperature.UUID) {
+          if (service.isHvacHeat) {
+            characteristic.props.maxValue = parseFloat(this.device.properties.heatingThermostatSetpointCapabilitiesMax);
+            characteristic.props.minValue = parseFloat(this.device.properties.heatingThermostatSetpointCapabilitiesMin);
+            characteristic.props.minStep = parseFloat(this.device.properties.heatingThermostatSetpointStep[this.device.properties.unit]);
+          } else if (service.isHvacCool) {
+            characteristic.props.maxValue = parseFloat(this.device.properties.coolingThermostatSetpointCapabilitiesMax);
+            characteristic.props.minValue = parseFloat(this.device.properties.coolingThermostatSetpointCapabilitiesMin);
+            characteristic.props.minStep = parseFloat(this.device.properties.coolingThermostatSetpointStep[this.device.properties.unit]);
+          } else {
+            characteristic.props.minValue = -50;
+            characteristic.props.maxValue = 100;
+          }
         }
-        if (characteristic.UUID === this.platform.Characteristic.TargetTemperature.UUID) {
-          characteristic.props.maxValue = 100;
+        if ((characteristic.UUID === this.platform.Characteristic.CurrentHeatingCoolingState.UUID
+          || characteristic.UUID === this.platform.Characteristic.TargetHeatingCoolingState.UUID)
+          && (service.isHvacHeat || service.isHvacCool)) {
+
+          const modes = this.device.properties.supportedThermostatModes;
+          let maxValue = 0;
+          let validValues;
+          if (modes) {
+            if (characteristic.UUID === this.platform.Characteristic.CurrentHeatingCoolingState.UUID) {
+              validValues = modes.map((mode) => {
+                let value = 0;
+                switch (mode) {
+                  case 'Off':
+                    value = this.platform.Characteristic.CurrentHeatingCoolingState.OFF;
+                    break;
+                  case 'Heat':
+                    value = this.platform.Characteristic.CurrentHeatingCoolingState.HEAT;
+                    break;
+                  case 'Cool':
+                    value = this.platform.Characteristic.CurrentHeatingCoolingState.COOL;
+                    break;
+                  default:
+                    break;
+                }
+                if (value > maxValue) {
+                  maxValue = value;
+                }
+                return value;
+              });
+            } else {
+              validValues = modes.map((mode) => {
+                let value = 0;
+                switch (mode) {
+                  case 'Off':
+                    value = this.platform.Characteristic.TargetHeatingCoolingState.OFF;
+                    break;
+                  case 'Heat':
+                    value = this.platform.Characteristic.TargetHeatingCoolingState.HEAT;
+                    break;
+                  case 'Cool':
+                    value = this.platform.Characteristic.TargetHeatingCoolingState.COOL;
+                    break;
+                  case 'Auto':
+                    value = this.platform.Characteristic.TargetHeatingCoolingState.AUTO;
+                    break;
+                  default:
+                    break;
+                }
+                if (value > maxValue) {
+                  maxValue = value;
+                }
+                return value;
+              });
+            }
+
+            validValues.filter((v, i) => validValues.indexOf(v) === i);
+            characteristic.setProps({
+              maxValue: maxValue,
+              validValues: validValues,
+            });
+          }
         }
         if (characteristic.UUID === this.platform.Characteristic.ValveType.UUID) {
           characteristic.value = this.platform.Characteristic.ValveType.GENERIC_VALVE;
@@ -335,6 +426,8 @@ export class FibaroAccessory {
       service.isScene = (IDs.length >= 3 && IDs[2] === 'SC') ? true : false;
       service.isClimateZone = (IDs.length >= 3 && IDs[2] === 'CZ') ? true : false;
       service.isHeatingZone = (IDs.length >= 3 && IDs[2] === 'HZ') ? true : false;
+      service.isHvacHeat = (IDs.length >= 3 && IDs[2] === 'HVAC_HEAT') ? true : false;
+      service.isHvacCool = (IDs.length >= 3 && IDs[2] === 'HVAC_COOL') ? true : false;
 
       if (!service.isVirtual && !service.isScene
         && characteristic.UUID !== this.platform.Characteristic.ValveType.UUID) {
@@ -345,10 +438,29 @@ export class FibaroAccessory {
         }
         if (characteristic.UUID === this.platform.Characteristic.CurrentHeatingCoolingState.UUID ||
                 characteristic.UUID === this.platform.Characteristic.TargetHeatingCoolingState.UUID) {
-          propertyChanged = 'mode';
+          if (service.isHvacHeat || service.isHvacCool) {
+            propertyChanged = 'thermostatMode';
+          } else {
+            propertyChanged = 'mode';
+          }
+        }
+        if (characteristic.UUID === this.platform.Characteristic.CurrentTemperature.UUID) {
+          // Use property "heatingThermostatSetpointFuture/coolingThermostatSetpointFuture" which is not in use now
+          // In HC3, it is set with current temperature value by script
+          if (service.isHvacHeat) {
+            propertyChanged = 'heatingThermostatSetpointFuture';
+          } else if (service.isHvacCool) {
+            propertyChanged = 'coolingThermostatSetpointFuture';
+          }
         }
         if (characteristic.UUID === this.platform.Characteristic.TargetTemperature.UUID) {
-          propertyChanged = 'targettemperature';
+          if (service.isHvacHeat) {
+            propertyChanged = 'heatingThermostatSetpoint';
+          } else if (service.isHvacCool) {
+            propertyChanged = 'coolingThermostatSetpoint';
+          } else {
+            propertyChanged = 'targettemperature';
+          }
         }
         if (service.UUID === this.platform.Service.WindowCovering.UUID
                 && characteristic.UUID === this.platform.Characteristic.CurrentHorizontalTiltAngle.UUID) {
