@@ -187,6 +187,25 @@ export class SetFunctions {
       await this.platform.fibaroClient.setClimateZoneHandTemperature(IDs[0], mode, currentTemperature, timestamp);
     } else if (service.isHeatingZone) {
       return;
+    } else if (service.isHvacHeat || service.isHvacCool) {
+      let mode = '';
+      switch (value) {
+        case this.platform.Characteristic.TargetHeatingCoolingState.OFF:
+          mode = 'Off';
+          break;
+        case this.platform.Characteristic.TargetHeatingCoolingState.HEAT:
+          mode = 'Heat';
+          break;
+        case this.platform.Characteristic.TargetHeatingCoolingState.COOL:
+          mode = 'Cool';
+          break;
+        case this.platform.Characteristic.TargetHeatingCoolingState.AUTO:
+          mode = 'Auto';
+          break;
+        default:
+          return;
+      }
+      await this.command('setThermostatMode', [mode], service, IDs);
     }
   }
 
@@ -214,6 +233,10 @@ export class SetFunctions {
       await this.platform.fibaroClient.setClimateZoneHandTemperature(IDs[0], mode, value, timestamp);
     } else if (service.isHeatingZone) {
       await this.platform.fibaroClient.setHeatingZoneHandTemperature(IDs[0], value, timestamp);
+    } else if (service.isHvacHeat) {
+      await this.command('setHeatingThermostatSetpoint', [value], service, IDs);
+    } else if (service.isHvacCool) {
+      await this.command('setCoolingThermostatSetpoint', [value], service, IDs);
     }
   }
 
